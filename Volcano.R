@@ -1,12 +1,12 @@
 library(tidyverse)
 
+print("[输入文件路径] [输出目录] [文件名] [火山图标题(加引号)]")
 args <- commandArgs(TRUE)
 stopifnot(length(args) >= 4)
 in_path <- args[1]
 out_path <- args[2]
-group2 <- args[4]
-group1 <- args[3]
-titleText <- paste(group2, group1, sep = " VS ")
+name <- args[3]
+titleText <- args[4]
 
 degs <- read_tsv(in_path)
 stopifnot("log2FoldChange" %in% colnames(degs), "padj" %in% colnames(degs))
@@ -20,12 +20,10 @@ vp <- ggplot(degs2, aes(log2FoldChange, -log10(padj))) +
 	  theme_bw() + 
 	  theme(panel.grid = element_blank())
 
-pdfOut <- paste(out_path, "pdf", sep = ".")
-epsOut <- paste(out_path, "eps", sep = ".")
-pngOut <- paste(out_path, "png", sep = ".")
-ggsave(filename = pdfOut, plot = vp)
-ggsave(filename = epsOut, plot = vp)
-ggsave(filename = pngOut, plot = vp)
+pdfOut <- str_glue("{out_path}/{name}.pdf")
+pngOut <- str_glue("{out_path}/{name}.png")
+ggsave(filename = pdfOut, plot = vp, dpi = 600)
+ggsave(filename = pngOut, plot = vp, dpi = 600)
 print("完成")
 
 
