@@ -22,7 +22,7 @@ vp <- ggplot(degs2, aes(log2FoldChange, -log10(padj))) +
 
 pdfOut <- str_glue("{out_path}/{name}.pdf")
 pngOut <- str_glue("{out_path}/{name}.png")
-ggsave(filename = pdfOut, plot = vp, dpi = 600)
+ggsave(filename = pdfOut, plot = vp)
 ggsave(filename = pngOut, plot = vp, dpi = 600)
 print("完成")
 
