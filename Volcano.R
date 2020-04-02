@@ -1,8 +1,13 @@
-library(tidyverse)
+# 从 DESeq2 差异基因结果生成火山图
+# 在 R 3.6 环境测试通过
+# 需要 tidyverse 包支持
 
-print("[输入文件路径] [输出目录] [文件名] [火山图标题(加引号)]")
+
+writeLines("Rscript Volcano.R DEG.csv OutputDir Filename \"PlotTitle\"\n")
 args <- commandArgs(TRUE)
 stopifnot(length(args) >= 4)
+
+library(tidyverse)
 in_path <- args[1]
 out_path <- args[2]
 name <- args[3]
@@ -24,6 +29,6 @@ pdfOut <- str_glue("{out_path}/{name}.pdf")
 pngOut <- str_glue("{out_path}/{name}.png")
 ggsave(filename = pdfOut, plot = vp)
 ggsave(filename = pngOut, plot = vp, dpi = 600)
-print("完成")
+writeLines("完成")
 
 

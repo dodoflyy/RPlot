@@ -1,13 +1,19 @@
-library(tidyverse)
-library(BuenColors)
+# 从clusterProfiler 通路富集结果输出泡泡图和柱状图
+# 可以选择展示的通路数目，默认按P值排序后筛选相应数目
+# 脚本在 R 3.6 测试通过
+# 需要以下包支持
+# tidyverse, BuenColors
 
-print("Rscript EnrichPathewy.R 输入文件路径 输出目录 输出文件名 展示数目 [标题]")
+writeLines("Rscript EnrichPathewy.R Input.csv OutputDir Filename PlotPathwayNum [PlotTitle]\n")
 args <- commandArgs(TRUE)
 stopifnot(length(args) >= 3)
 inPath <- args[1]
 outDir <- args[2]
 fileName <- args[3]
 showNum <- args[4]
+
+library(tidyverse)
+library(BuenColors)
 
 if(length(args) >= 5){
   plotTitle <- args[5]
@@ -52,5 +58,5 @@ ggsave(filename=dotPdf, dpi=600, plot=dotPlot)
 ggsave(filename=barPng, dpi=600, plot=barPlot)
 ggsave(filename=barPdf, dpi=600, plot=barPlot)
 
-print("完成")
+writeLines("完成")
 

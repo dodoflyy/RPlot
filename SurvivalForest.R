@@ -1,10 +1,16 @@
+# 从 cox 分析结果画森林图
+# 脚本在 R 3.6 环境测试通过
+# 需要以下包支持
+# tidyverse, BuenColors
+
+writeLines("Rscript SurvivalForest.R Input.csv OutputDir Filename AxisYLable\n")
+args <- commandArgs(trailingOnly = TRUE)
+stopifnot(length(args) >= 4)
+
 library(tidyverse, quietly = TRUE)
 library(BuenColors, quietly = TRUE)
 
-print("Rscript SurvivalForest.R 输入文件路径 输出目录 文件名 Y轴标题")
 
-args <- commandArgs(trailingOnly = TRUE)
-stopifnot(length(args) >= 4)
 inPath <- args[1]
 outDir <- args[2]
 fileName <- args[3]
@@ -27,4 +33,4 @@ pngPlot <- str_glue("{outDir}/{fileName}.png")
 pdfPlot <- str_glue("{outDir}/{fileName}.pdf")
 ggsave(filename = pdfPlot, plot = p)
 ggsave(filename = pngPlot, plot = p, dpi = 600)
-print("完成")
+writeLines("完成")
