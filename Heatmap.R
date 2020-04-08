@@ -19,7 +19,7 @@ Data$gene_id <- NULL
 Data2 <- t(Data) %>% scale() %>% t()
 head(Data2, n=3)
 
-color <- jdb_palette("brewer_celsius", type="continuous")
+color <- jdb_palette("Zissou", type="continuous")
 if (length(argvs) >= 3) {
   titleText <- argvs[3]
   hm <- Heatmap(Data2, name="Expression(scaled)", col=color, cluster_rows = TRUE, cluster_columns = FALSE, show_row_names = FALSE, column_names_side = "top", column_title = titleText)

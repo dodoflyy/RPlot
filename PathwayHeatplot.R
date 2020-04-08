@@ -6,7 +6,6 @@
 # 需要以下 R 包支持
 # tidyverse, ComplexHeatmap, BuenColors
 
-
 writeLines("Rscript PathwayHeatplot.R Pathway.csv DEG.csv Heatplot.pdf \"TitleText\" \n")
 argvs <- commandArgs(trailingOnly = TRUE)
 stopifnot(length(argvs) >= 4)
@@ -15,6 +14,7 @@ options(stringsAsFactors = FALSE)
 library(tidyverse, quietly = TRUE)
 library(ComplexHeatmap, quietly = TRUE)
 library(BuenColors, quietly=TRUE)
+library(circlize, quietly = TRUE)
 
 # 默认用 entrezgene_id 进行 GSEA
 degData <- read_csv(argvs[2]) %>% dplyr::filter(!is.na(entrezgene_id)) %>% dplyr::distinct(entrezgene_id, .keep_all=TRUE)
@@ -59,7 +59,6 @@ Data <- Data[, colSums(!is.na(Data)) > 0]
 # 转换到行为通路，列为基因
 PlotData <- t(Data)
 head(PlotData, n=3)
-color <- jdb_palette("brewer_celsius", type="continuous")
 if (nrow(PlotData) <= 10) {
   h <- 4
   w <- 22
@@ -76,8 +75,32 @@ if (nrow(PlotData) <= 10) {
   h <- 18
   w <- 22
 }
- 
-hm <- Heatmap(PlotData, name="FoldChange(Log2)", col=color, column_title = argvs[4], column_title_side = "top", cluster_rows = FALSE, cluster_columns = FALSE, show_column_dend = FALSE, show_row_dend = FALSE, show_row_names = TRUE, show_column_names = TRUE, row_names_side = "left", column_names_side = "bottom", column_names_rot = 45, na_col = "white", column_order = order(colSums(is.na(PlotData))), row_order = order(rowSums(!is.na(PlotData))), row_names_max_width = max_text_width(rownames(PlotData)), border = TRUE, rect_gp = gpar(col="white"), heatmap_legend_param = list(grid_height = unit(8, "mm"), grid_width = unit(6, "mm")))
+
+minL <- min(PlotData, na.rm = TRUE)
+maxL <- max(PlotData, na.rm = TRUE)
+color <- jdb_palette("ocean_brick", type="continuous")
+if (all(abs(minL) <= 1 , abs(maxL) <= 1)) {
+  fromL <- -1
+  toL <- 1
+  breaksL <- c(-1, 0, 1)
+  labelsL <- c("-1", "0", "1")
+  heightL <- 8
+} else if (all(abs(minL) <= 2 , abs(maxL) <= 2)) {
+  fromL <- -2
+  toL <- 2
+  breaksL <- c(-2, 0, 2)
+  labelsL <- c("-2", "0", "2")
+  heightL <- 8
+} else {
+  fromL <- -4
+  toL <- 4
+  breaksL <- c(-4, -2, 0, 2, 4)
+  labelsL <- c("<= -4", "-2", "0", "2", ">= 4")
+  heightL <- 12
+}
+
+color_fun <- colorRamp2(seq(from = fromL, to = toL, length.out = length(color)), color)
+hm <- Heatmap(PlotData, name="FoldChange(Log2)", col=color_fun, column_title = argvs[4], column_title_side = "top", cluster_rows = FALSE, cluster_columns = FALSE, show_column_dend = FALSE, show_row_dend = FALSE, show_row_names = TRUE, show_column_names = TRUE, row_names_side = "left", column_names_side = "bottom", column_names_rot = 45, na_col = "white", column_order = order(colSums(is.na(PlotData))), row_order = order(rowSums(!is.na(PlotData))), row_names_max_width = max_text_width(rownames(PlotData)), border = TRUE, rect_gp = gpar(col="white"), heatmap_legend_param = list(grid_height = unit(heightL, "mm"), grid_width = unit(6, "mm"), at = breaksL, labels = labelsL))
 
 pdf(argvs[3], width = w, height = h)
 draw(hm)

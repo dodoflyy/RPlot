@@ -21,7 +21,7 @@ if(length(args) >= 5){
   plotTitle <- "Pathway enrichment"
   }
 
-pathway <- read_tsv(inPath) %>% arrange(`p.adjust`) %>% separate(GeneRatio, into=c("k", "n"), sep="/") %>% separate(BgRatio, into=c("M", "N"), sep="/") %>% mutate(RichFactor=as.numeric(k)/as.numeric(M)) %>% slice(1:showNum)
+pathway <- read_csv(inPath) %>% arrange(`p.adjust`) %>% separate(GeneRatio, into=c("k", "n"), sep="/") %>% separate(BgRatio, into=c("M", "N"), sep="/") %>% mutate(RichFactor=as.numeric(k)/as.numeric(M)) %>% slice(1:showNum)
 head(pathway) %>% print()
 
 dotPathway <- arrange(pathway, RichFactor)
@@ -53,10 +53,10 @@ dotPdf <- str_glue("{outDir}/{fileName}-Dot.pdf")
 barPng <- str_glue("{outDir}/{fileName}-Bar.png")
 barPdf <- str_glue("{outDir}/{fileName}-Bar.pdf")
 
-ggsave(filename=dotPng, dpi=600, plot=dotPlot)
-ggsave(filename=dotPdf, dpi=600, plot=dotPlot)
-ggsave(filename=barPng, dpi=600, plot=barPlot)
-ggsave(filename=barPdf, dpi=600, plot=barPlot)
+ggsave(filename=dotPng, dpi=600, plot=dotPlot, device = "png")
+ggsave(filename=dotPdf, plot=dotPlot, device = "pdf")
+ggsave(filename=barPng, dpi=600, plot=barPlot, device = "png")
+ggsave(filename=barPdf, plot=barPlot, device = "pdf")
 
 writeLines("完成")
 

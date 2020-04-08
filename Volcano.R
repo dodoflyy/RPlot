@@ -13,7 +13,7 @@ out_path <- args[2]
 name <- args[3]
 titleText <- args[4]
 
-degs <- read_tsv(in_path)
+degs <- read_csv(in_path)
 stopifnot("log2FoldChange" %in% colnames(degs), "padj" %in% colnames(degs))
 degs2 <- filter(degs, !is.na(padj))
 vp <- ggplot(degs2, aes(log2FoldChange, -log10(padj))) + 
@@ -27,8 +27,8 @@ vp <- ggplot(degs2, aes(log2FoldChange, -log10(padj))) +
 
 pdfOut <- str_glue("{out_path}/{name}.pdf")
 pngOut <- str_glue("{out_path}/{name}.png")
-ggsave(filename = pdfOut, plot = vp)
-ggsave(filename = pngOut, plot = vp, dpi = 600)
+ggsave(filename = pdfOut, plot = vp, device = "pdf")
+ggsave(filename = pngOut, plot = vp, dpi = 600, device = "png")
 writeLines("完成")
 
 

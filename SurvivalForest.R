@@ -16,7 +16,7 @@ outDir <- args[2]
 fileName <- args[3]
 yTitle <- args[4]
 
-coxData <- read_tsv(inPath)
+coxData <- read_csv(inPath)
 head(coxData) %>% print()
 
 p <- ggplot(coxData) +
@@ -31,6 +31,6 @@ p <- ggplot(coxData) +
 
 pngPlot <- str_glue("{outDir}/{fileName}.png")
 pdfPlot <- str_glue("{outDir}/{fileName}.pdf")
-ggsave(filename = pdfPlot, plot = p)
-ggsave(filename = pngPlot, plot = p, dpi = 600)
+ggsave(filename = pdfPlot, plot = p, device = "pdf")
+ggsave(filename = pngPlot, plot = p, dpi = 600, device = "png")
 writeLines("完成")
