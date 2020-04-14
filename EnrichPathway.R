@@ -21,7 +21,10 @@ if(length(args) >= 5){
   plotTitle <- "Pathway enrichment"
   }
 
-pathway <- read_csv(inPath) %>% arrange(`p.adjust`) %>% separate(GeneRatio, into=c("k", "n"), sep="/") %>% separate(BgRatio, into=c("M", "N"), sep="/") %>% mutate(RichFactor=as.numeric(k)/as.numeric(M)) %>% slice(1:showNum)
+pathway <- read_csv(inPath) %>% arrange(`p.adjust`) %>% separate(GeneRatio, into=c("k", "n"), sep="/") %>% separate(BgRatio, into=c("M", "N"), sep="/") %>% mutate(RichFactor=as.numeric(k)/as.numeric(M))
+if (nrow(pathway) > showNum) {
+  pathway <- dplyr::slice(pathway, showNum)
+}
 head(pathway) %>% print()
 
 dotPathway <- arrange(pathway, RichFactor)
