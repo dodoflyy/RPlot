@@ -4,13 +4,13 @@
 # 需要以下包支持
 # tidyverse, BuenColors
 
-writeLines("Rscript EnrichPathewy.R Input.csv OutputDir Filename PlotPathwayNum [PlotTitle]\n")
+writeLines("\nRscript EnrichPathewy.R Input.csv OutputDir Filename PlotPathwayNum [PlotTitle]\n")
 args <- commandArgs(TRUE)
 stopifnot(length(args) >= 3)
 inPath <- args[1]
 outDir <- args[2]
 fileName <- args[3]
-showNum <- args[4]
+showNum <- as.integer(args[4]) 
 
 library(tidyverse)
 library(BuenColors)
@@ -25,7 +25,7 @@ pathway <- read_csv(inPath) %>% arrange(`p.adjust`) %>% separate(GeneRatio, into
 if (nrow(pathway) > showNum) {
   pathway <- dplyr::slice(pathway, showNum)
 }
-head(pathway) %>% print()
+glimpse(pathway)
 
 dotPathway <- arrange(pathway, RichFactor)
 dotPathway <- mutate(dotPathway, Description=factor(Description, levels=dotPathway$Description))
@@ -51,15 +51,23 @@ barPlot <- ggplot(barPathway, aes(x=ID, y=Count)) +
   labs(y="Gene count", title=plotTitle, x="Pathway ID", fill="P value") +
   theme(axis.text.x=element_text(angle=45, hjust=1), panel.background=element_rect(fill="#FFFFFF", color="#000000", linetype="solid"), panel.grid.major=element_blank(), panel.grid.minor=element_blank())
 
-dotPng <- str_glue("{outDir}/{fileName}-Dot.png")
-dotPdf <- str_glue("{outDir}/{fileName}-Dot.pdf")
-barPng <- str_glue("{outDir}/{fileName}-Bar.png")
-barPdf <- str_glue("{outDir}/{fileName}-Bar.pdf")
+dotPng <- str_glue("{outDir}/{fileName}_Dot.png")
+dotPdf <- str_glue("{outDir}/{fileName}_Dot.pdf")
+barPng <- str_glue("{outDir}/{fileName}_Bar.png")
+barPdf <- str_glue("{outDir}/{fileName}_Bar.pdf")
 
-ggsave(filename=dotPng, dpi=600, plot=dotPlot, device = "png")
-ggsave(filename=dotPdf, plot=dotPlot, device = "pdf")
-ggsave(filename=barPng, dpi=600, plot=barPlot, device = "png")
-ggsave(filename=barPdf, plot=barPlot, device = "pdf")
+dot_h <- showNum * 10 + 30
+if (dot_h < 150) {
+  dot_h <- 150
+}
+bar_w <- showNum * 10 + 20
+if (bar_w < 120) {
+  bar_w <- 120
+}
+ggsave(filename=dotPng, dpi=600, plot=dotPlot, device = "png", width = 150, height = dot_h, unit = "mm")
+ggsave(filename=dotPdf, plot=dotPlot, device = "pdf", width = 150, height = dot_h, unit = "mm")
+ggsave(filename=barPng, dpi=600, plot=barPlot, device = "png", width = bar_w, height = 150, unit = "mm")
+ggsave(filename=barPdf, plot=barPlot, device = "pdf", width = bar_w, height = 150, unit = "mm")
 
 writeLines("完成")
 

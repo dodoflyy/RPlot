@@ -5,7 +5,7 @@
 # 需要以下 R 包支持
 # tidyverse, ComplexHeatmap, BuenColors
 
-writeLines("Rscript Heatmap.R ExpressionData.csv Heatmap.pdf [Title]\n")
+writeLines("\nRscript Heatmap.R ExpressionData.csv Heatmap.pdf [Title]\n")
 argvs <- commandArgs(trailingOnly = TRUE)
 stopifnot(length(argvs) >= 2)
 

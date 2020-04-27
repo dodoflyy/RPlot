@@ -4,7 +4,7 @@
 # 需要以下 R 包支持
 # tidyverse, pheatmap, BuenColors
 
-writeLines("Rscript pHeatmap.R Expression.csv DEG.csv OutputDir Filename GeneIdType [\"Image Title\"]\n")
+writeLines("\nRscript pHeatmap.R Expression.csv DEG.csv OutputDir Filename GeneIdType [\"Image Title\"]\n")
 args <- commandArgs(TRUE)
 stopifnot(length(args) >= 5)
 

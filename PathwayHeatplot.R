@@ -1,12 +1,12 @@
 # 行为通路，列为基因的通路富集热图
-# 固定展示 P < 0.05 的通路，基因展示前 50 个
+# 基因展示前 50 个
 # 默认差异基因是 DESeq2 的结果，如果不是要修改表头
 # 默认 GSEA 结果是 clusterProfiler 产生的
 # 在 R 3.6 环境测试通过
 # 需要以下 R 包支持
 # tidyverse, ComplexHeatmap, BuenColors
 
-writeLines("Rscript PathwayHeatplot.R Pathway.csv DEG.csv Heatplot.pdf \"TitleText\" \n")
+writeLines("\nRscript PathwayHeatplot.R Pathway.csv CutoffP DEG.csv Heatplot.pdf \"TitleText\" \n")
 argvs <- commandArgs(trailingOnly = TRUE)
 stopifnot(length(argvs) >= 4)
 
@@ -17,11 +17,13 @@ library(BuenColors, quietly=TRUE)
 library(circlize, quietly = TRUE)
 
 # 默认用 entrezgene_id 进行 GSEA
-degData <- read_csv(argvs[2]) %>% dplyr::filter(!is.na(entrezgene_id)) %>% dplyr::distinct(entrezgene_id, .keep_all=TRUE)
+# 用 SYMBOL 进行排序，这样重复 entrezgene_id 时能优先选择有 symbol 的
+degData <- read_csv(argvs[3]) %>% dplyr::arrange(hgnc_symbol) %>% dplyr::filter(!is.na(entrezgene_id)) %>% dplyr::distinct(entrezgene_id, .keep_all=TRUE)
 deg <- degData$log2FoldChange
 names(deg) <- degData$entrezgene_id
 
-pathwayData <- read_csv(argvs[1]) %>% dplyr::filter(`p.adjust` < 0.05)
+pCutoff <- as.double(argvs[2])
+pathwayData <- read_csv(argvs[1]) %>% dplyr::filter(`p.adjust` < pCutoff)
 stopifnot(nrow(pathwayData) > 1)
 geneList <- stringr::str_c(pathwayData$core_enrichment, collapse = "/") %>% strsplit(split = "/", fixed = TRUE) %>% unlist() %>% table() %>% unlist()
 rankGeneList <- geneList[order(geneList, decreasing = TRUE)] %>% names()
@@ -48,9 +50,8 @@ for (i in 1:length(pathwayGene)) {
 Data <- as.data.frame(DataList)
 # head(Data, n=3)
 geneMap <- tibble(entrezgene_id=as.double(rankGeneList)) %>% dplyr::left_join(degData, by="entrezgene_id") %>% dplyr::select(entrezgene_id, hgnc_symbol)
-head(geneMap, n=3)
 head(rankGeneList)
-dim(geneMap)
+glimpse(geneMap)
 length(rankGeneList)
 rownames(Data) <- geneMap$hgnc_symbol
 colnames(Data) <- Description
@@ -59,21 +60,10 @@ Data <- Data[, colSums(!is.na(Data)) > 0]
 # 转换到行为通路，列为基因
 PlotData <- t(Data)
 head(PlotData, n=3)
-if (nrow(PlotData) <= 10) {
-  h <- 4
-  w <- 22
-} else if (nrow(PlotData) > 10 && nrow(PlotData) <= 20) {
-  h <- 7
-  w <- 22
-} else if (nrow(PlotData) > 20 && nrow(PlotData) <= 30) {
-  h <- 9
-  w <- 22
-}  else if (nrow(PlotData) > 30 && nrow(PlotData) <= 50) {
-  h <- 14
-  w <- 22
-} else {
-  h <- 18
-  w <- 22
+w <- 22
+h <- nrow(PlotData) * 0.25
+if (h < 7) {
+  h = 7
 }
 
 minL <- min(PlotData, na.rm = TRUE)
@@ -102,7 +92,7 @@ if (all(abs(minL) <= 1 , abs(maxL) <= 1)) {
 color_fun <- colorRamp2(seq(from = fromL, to = toL, length.out = length(color)), color)
 hm <- Heatmap(PlotData, name="FoldChange(Log2)", col=color_fun, column_title = argvs[4], column_title_side = "top", cluster_rows = FALSE, cluster_columns = FALSE, show_column_dend = FALSE, show_row_dend = FALSE, show_row_names = TRUE, show_column_names = TRUE, row_names_side = "left", column_names_side = "bottom", column_names_rot = 45, na_col = "white", column_order = order(colSums(is.na(PlotData))), row_order = order(rowSums(!is.na(PlotData))), row_names_max_width = max_text_width(rownames(PlotData)), border = TRUE, rect_gp = gpar(col="white"), heatmap_legend_param = list(grid_height = unit(heightL, "mm"), grid_width = unit(6, "mm"), at = breaksL, labels = labelsL))
 
-pdf(argvs[3], width = w, height = h)
+pdf(argvs[4], width = w, height = h)
 draw(hm)
 dev.off()
 

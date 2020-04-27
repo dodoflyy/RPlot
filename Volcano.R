@@ -3,7 +3,7 @@
 # 需要 tidyverse 包支持
 
 
-writeLines("Rscript Volcano.R DEG.csv OutputDir Filename \"PlotTitle\"\n")
+writeLines("\nRscript Volcano.R DEG.csv OutputDir Filename \"PlotTitle\"\n")
 args <- commandArgs(TRUE)
 stopifnot(length(args) >= 4)
 
@@ -25,8 +25,8 @@ vp <- ggplot(degs2, aes(log2FoldChange, -log10(padj))) +
 	  theme_bw() + 
 	  theme(panel.grid = element_blank())
 
-pdfOut <- str_glue("{out_path}/{name}.pdf")
-pngOut <- str_glue("{out_path}/{name}.png")
+pdfOut <- str_glue("{out_path}/{name}_Volcano.pdf")
+pngOut <- str_glue("{out_path}/{name}_Volcano.png")
 ggsave(filename = pdfOut, plot = vp, device = "pdf")
 ggsave(filename = pngOut, plot = vp, dpi = 600, device = "png")
 writeLines("完成")
