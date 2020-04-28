@@ -16,7 +16,7 @@ print(in_path)
 print(out_path)
 
 with gzip.open(in_path, mode="rb") as i, open(out_path, 'w') as o:
-    o.write('Position\tDepth\n')
+    o.write('Position,Depth\n')
     for line in i:
         if line.strip():
             line2 = line.decode(encoding='utf-8').strip()
@@ -25,6 +25,6 @@ with gzip.open(in_path, mode="rb") as i, open(out_path, 'w') as o:
             p1 = int(items[1])
             p2 = int(items[2]) - 1
             d = items[3]
-            o.write(f'{p1},{d},{p2},{d}\n')
+            o.write(f'{p1},{d}\n{p2},{d}\n')
 
 print('完成')
