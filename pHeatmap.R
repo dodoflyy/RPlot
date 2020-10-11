@@ -4,25 +4,34 @@
 # 需要以下 R 包支持
 # tidyverse, pheatmap, BuenColors
 
+writeLines("\n热图展示 DESeq2 差异基因分析结果\n")
+writeLines("Usage:")
 writeLines("\nRscript pHeatmap.R Expression.csv DEG.csv OutputDir Filename GeneIdType [\"Image Title\"]\n")
 args <- commandArgs(TRUE)
 stopifnot(length(args) >= 5)
 
-library(tidyverse)
-library(pheatmap)
-library(BuenColors)
-
-expr_path <- args[1]
-deg_path <- args[2]
+expr_path <- file.path(args[1])
+deg_path <- file.path(args[2])
 outDir <- args[3]
 name <- args[4]
 geneIdType <- args[5]
 
+writeLines(stringr::str_glue("表达数据：{expr_path}"))
+writeLines(stringr::str_glue("差异基因：{deg_path}"))
+writeLines(stringr::str_glue("输出目录：{outDir}"))
+writeLines(stringr::str_glue("输出文件名：{name}"))
+writeLines(stringr::str_glue("基因 ID 类别：{geneIdType}"))
+
 if(length(args) >= 6){
   titleText <- args[6]
-  }else{
+  writeLines(stringr::str_glue("图像标题：{titleText}"))
+}else{
   titleText <- "Gene expression heatmap"
-  }
+}
+
+library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
+library(pheatmap, warn.conflicts = FALSE, quietly = TRUE)
+library(BuenColors, warn.conflicts = FALSE, quietly = TRUE)
 
 pdfOut <- str_glue("{outDir}/{name}.pdf")
 pngOut <- str_glue("{outDir}/{name}.png")
@@ -59,4 +68,5 @@ minV <- min(exprV)
 color_color <- jdb_palette("Zissou", type = "continuous")
 pheatmap(expr2, cluster_rows = TRUE, cluster_cols = TRUE, legend = TRUE, show_colnames = TRUE, show_rownames = FALSE, color = color_color, scale = "none", main = titleText, legend_breaks = c(minV, maxV), legend_labels = c("Low", "High"), filename = pdfOut)
 pheatmap(expr2, cluster_rows = TRUE, cluster_cols = TRUE, legend = TRUE, show_colnames = TRUE, show_rownames = FALSE, color = color_color, scale = "none", main = titleText, legend_breaks = c(minV, maxV), legend_labels = c("Low", "High"), filename = pngOut)
-writeLines("完成")
+
+writeLines("\n完成")

@@ -2,16 +2,22 @@
 # 在 R 3.6 环境测试通过
 # 需要 tidyverse 包支持
 
-
+writeLines("\n基因表达火山图\n")
+writeLines("Usage:")
 writeLines("\nRscript Volcano.R DEG.csv OutputDir Filename \"PlotTitle\"\n")
 args <- commandArgs(TRUE)
 stopifnot(length(args) >= 4)
 
-library(tidyverse)
 in_path <- args[1]
 out_path <- args[2]
 name <- args[3]
 titleText <- args[4]
+writeLines(stringr::str_glue("差异基因文件：{in_path}"))
+writeLines(stringr::str_glue("输出目录：{out_path}"))
+writeLines(stringr::str_glue("输出文件名：{name}"))
+writeLines(stringr::str_glue("图片标题：{titleText}"))
+
+library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
 
 degs <- read_csv(in_path)
 stopifnot("log2FoldChange" %in% colnames(degs), "padj" %in% colnames(degs))
@@ -29,6 +35,7 @@ pdfOut <- str_glue("{out_path}/{name}_Volcano.pdf")
 pngOut <- str_glue("{out_path}/{name}_Volcano.png")
 ggsave(filename = pdfOut, plot = vp, device = "pdf")
 ggsave(filename = pngOut, plot = vp, dpi = 600, device = "png")
-writeLines("完成")
+
+writeLines("\n完成")
 
 

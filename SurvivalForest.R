@@ -3,18 +3,24 @@
 # 需要以下包支持
 # tidyverse, BuenColors
 
+writeLines("\nCox 生存分析的森林图\n")
+writeLines("Usage:")
 writeLines("Rscript SurvivalForest.R Input.csv OutputDir Filename AxisYLable\n")
 args <- commandArgs(trailingOnly = TRUE)
 stopifnot(length(args) >= 4)
 
-library(tidyverse, quietly = TRUE)
-library(BuenColors, quietly = TRUE)
-
-
-inPath <- args[1]
+inPath <- file.path(args[1])
 outDir <- args[2]
 fileName <- args[3]
 yTitle <- args[4]
+
+writeLines(stringr::str_glue("输入文件：{inPath}"))
+writeLines(stringr::str_glue("输出目录：{outDir}"))
+writeLines(stringr::str_glue("输出文件名：{fileName}"))
+writeLines(stringr::str_glue("Y 轴标题：{yTitle}"))
+
+library(tidyverse, quietly = TRUE, warn.conflicts = FALSE)
+library(BuenColors, quietly = TRUE, warn.conflicts = FALSE)
 
 coxData <- read_csv(inPath)
 head(coxData) %>% print()
@@ -33,4 +39,5 @@ pngPlot <- str_glue("{outDir}/{fileName}.png")
 pdfPlot <- str_glue("{outDir}/{fileName}.pdf")
 ggsave(filename = pdfPlot, plot = p, device = "pdf")
 ggsave(filename = pngPlot, plot = p, dpi = 600, device = "png")
-writeLines("完成")
+
+writeLines("\N完成")

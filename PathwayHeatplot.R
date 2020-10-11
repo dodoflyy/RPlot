@@ -6,24 +6,36 @@
 # 需要以下 R 包支持
 # tidyverse, ComplexHeatmap, BuenColors
 
-writeLines("\nRscript PathwayHeatplot.R Pathway.csv CutoffP DEG.csv Heatplot.pdf \"TitleText\" \n")
+writeLines("\n做通路富集和差异基因的热图\n")
+writeLines("Usage:")
+writeLines("\nRscript PathwayHeatplot.R GSEA.csv CutoffP DEG.csv Heatplot.pdf \"TitleText\" \n")
 argvs <- commandArgs(trailingOnly = TRUE)
-stopifnot(length(argvs) >= 4)
+stopifnot(length(argvs) >= 5)
+
+gseaPath <- file.path(argvs[1])
+pCutoff <- as.double(argvs[2])
+degPath <- file.path(argvs[3])
+plotPath <- file.path(argvs[4])
+titleText <- argvs[5]
+writeLines(stringr::str_glue("GSEA 数据：{gseaPath}"))
+writeLines(stringr::str_glue("P value 阈值：{pCutoff}"))
+writeLines(stringr::str_glue("差异基因文件：{degPath}"))
+writeLines(stringr::str_glue("输出：{plotPath}"))
+writeLines(stringr::str_glue("图像标题：{titleText}"))
 
 options(stringsAsFactors = FALSE)
-library(tidyverse, quietly = TRUE)
-library(ComplexHeatmap, quietly = TRUE)
-library(BuenColors, quietly=TRUE)
-library(circlize, quietly = TRUE)
+library(tidyverse, quietly = TRUE, warn.conflicts = FALSE)
+library(ComplexHeatmap, quietly = TRUE, warn.conflicts = FALSE)
+library(BuenColors, quietly=TRUE, warn.conflicts = FALSE)
+library(circlize, quietly = TRUE, warn.conflicts = FALSE)
 
 # 默认用 entrezgene_id 进行 GSEA
 # 用 SYMBOL 进行排序，这样重复 entrezgene_id 时能优先选择有 symbol 的
-degData <- read_csv(argvs[3]) %>% dplyr::arrange(hgnc_symbol) %>% dplyr::filter(!is.na(entrezgene_id)) %>% dplyr::distinct(entrezgene_id, .keep_all=TRUE)
+degData <- read_csv(degPath) %>% dplyr::arrange(hgnc_symbol) %>% dplyr::filter(!is.na(entrezgene_id)) %>% dplyr::distinct(entrezgene_id, .keep_all=TRUE)
 deg <- degData$log2FoldChange
 names(deg) <- degData$entrezgene_id
 
-pCutoff <- as.double(argvs[2])
-pathwayData <- read_csv(argvs[1]) %>% dplyr::filter(`p.adjust` < pCutoff)
+pathwayData <- read_csv(gseaPath) %>% dplyr::filter(`p.adjust` < pCutoff)
 stopifnot(nrow(pathwayData) > 1)
 geneList <- stringr::str_c(pathwayData$core_enrichment, collapse = "/") %>% strsplit(split = "/", fixed = TRUE) %>% unlist() %>% table() %>% unlist()
 rankGeneList <- geneList[order(geneList, decreasing = TRUE)] %>% names()
@@ -90,10 +102,10 @@ if (all(abs(minL) <= 1 , abs(maxL) <= 1)) {
 }
 
 color_fun <- colorRamp2(seq(from = fromL, to = toL, length.out = length(color)), color)
-hm <- Heatmap(PlotData, name="FoldChange(Log2)", col=color_fun, column_title = argvs[4], column_title_side = "top", cluster_rows = FALSE, cluster_columns = FALSE, show_column_dend = FALSE, show_row_dend = FALSE, show_row_names = TRUE, show_column_names = TRUE, row_names_side = "left", column_names_side = "bottom", column_names_rot = 45, na_col = "white", column_order = order(colSums(is.na(PlotData))), row_order = order(rowSums(!is.na(PlotData))), row_names_max_width = max_text_width(rownames(PlotData)), border = TRUE, rect_gp = gpar(col="white"), heatmap_legend_param = list(grid_height = unit(heightL, "mm"), grid_width = unit(6, "mm"), at = breaksL, labels = labelsL))
+hm <- Heatmap(PlotData, name="FoldChange(Log2)", col=color_fun, column_title = titleText, column_title_side = "top", cluster_rows = FALSE, cluster_columns = FALSE, show_column_dend = FALSE, show_row_dend = FALSE, show_row_names = TRUE, show_column_names = TRUE, row_names_side = "left", column_names_side = "bottom", column_names_rot = 45, na_col = "white", column_order = order(colSums(is.na(PlotData))), row_order = order(rowSums(!is.na(PlotData))), row_names_max_width = max_text_width(rownames(PlotData)), border = TRUE, rect_gp = gpar(col="white"), heatmap_legend_param = list(grid_height = unit(heightL, "mm"), grid_width = unit(6, "mm"), at = breaksL, labels = labelsL))
 
-pdf(argvs[4], width = w, height = h)
+pdf(plotPath, width = w, height = h)
 draw(hm)
 dev.off()
 
-writeLines("完成")
+writeLines("\n完成！")

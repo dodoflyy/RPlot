@@ -1,25 +1,35 @@
 # 从表达矩阵生成样本聚类树
 # 默认输入矩阵行为基因，列为样本，第一列为 gene_id
-# CutHeight 参数如果设置为0表示不进行 Cutree 只出一个聚类树
+# CutHeight 参数如果设置为 0 表示不进行 Cutree 只出一个聚类树
 # 脚本在 R 3.6 测试通过
 # 需要 tidyverse 包
 
+writeLines("\n表达矩阵生成样本聚类树\n")
+writeLines("Usage:")
 writeLines("\nRscript SampleCutTree.R Expression.csv CutHeight OutputDir Filename [\"Plot Title\"]")
 argvs <- commandArgs(trailingOnly = TRUE)
 stopifnot(length(argvs) >= 4)
 
-library(tidyverse, quietly = TRUE)
-
-if (length(argvs) >= 5) {
-  plotTitle <- argvs[5]
-} else {
-  plotTitle <- "Sample Cluster Dendrogram"
-}
+expressionPath <- file.path(argvs[1])
 cutHeight <- argvs[2] %>% as.double()
 outDir <- argvs[3]
 fileName <- argvs[4]
 
-Data1 <- read_csv(argvs[1])
+writeLines(stringr::str_glue("表达数据：{expressionPath}"))
+writeLines(stringr::str_glue("Cut Height: {cutHeight}"))
+writeLines(stringr::str_glue("输出目录：{outDir}"))
+writeLines(stringr::str_glue("输出文件名：{fileName}"))
+
+if (length(argvs) >= 5) {
+  plotTitle <- argvs[5]
+  writeLines(stringr::str_glue("图像标题：{plotTitle}"))
+} else {
+  plotTitle <- "Sample Cluster Dendrogram"
+}
+
+library(tidyverse, quietly = TRUE, warn.conflicts = FALSE)
+
+Data1 <- read_csv(expressionPath)
 glimpse(Data1)
 Data2 <- as.data.frame(Data1)
 rownames(Data2) <- Data2$gene_id
@@ -54,4 +64,4 @@ if (cutHeight != 0) {
 }
 
 
-writeLines("完成")
+writeLines("\n完成")

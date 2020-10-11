@@ -4,26 +4,33 @@
 # 需要以下包支持
 # tidyverse, BuenColors
 
+writeLines("\n生成 clusterProfiler 通路富集结果的泡泡图和柱状图\n")
+writeLines("Usage:")
 writeLines("\nRscript EnrichPathewy.R Input.csv OutputDir Filename PlotPathwayNum [PlotTitle]\n")
 args <- commandArgs(TRUE)
 stopifnot(length(args) >= 3)
 inPath <- args[1]
-outDir <- args[2]
+outDir <- file.path(args[2])
 fileName <- args[3]
 showNum <- as.integer(args[4]) 
-
-library(tidyverse)
-library(BuenColors)
+writeLines(stringr::str_glue("通路数据：{inPath}"))
+writeLines(stringr::str_glue("输出目录：{outDir}"))
+writeLines(stringr::str_glue("输出文件名：{fileName}"))
+writeLines(stringr::str_glue("显示通路数目：{showNum}"))
 
 if(length(args) >= 5){
   plotTitle <- args[5]
-  }else{
+  writeLines(stringr::str_glue("图像标题：{plotTitle}\n"))
+}else{
   plotTitle <- "Pathway enrichment"
-  }
+}
+
+library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
+library(BuenColors, warn.conflicts = FALSE, quietly = TRUE)
 
 pathway <- read_csv(inPath) %>% arrange(`p.adjust`) %>% separate(GeneRatio, into=c("k", "n"), sep="/") %>% separate(BgRatio, into=c("M", "N"), sep="/") %>% mutate(RichFactor=as.numeric(k)/as.numeric(M))
 if (nrow(pathway) > showNum) {
-  pathway <- dplyr::slice(pathway, showNum)
+  pathway <- dplyr::slice(pathway, 1:showNum)
 }
 glimpse(pathway)
 
@@ -69,5 +76,5 @@ ggsave(filename=dotPdf, plot=dotPlot, device = "pdf", width = 150, height = dot_
 ggsave(filename=barPng, dpi=600, plot=barPlot, device = "png", width = bar_w, height = 150, unit = "mm")
 ggsave(filename=barPdf, plot=barPlot, device = "pdf", width = bar_w, height = 150, unit = "mm")
 
-writeLines("完成")
+writeLines("\n完成！")
 

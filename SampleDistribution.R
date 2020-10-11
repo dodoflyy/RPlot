@@ -5,17 +5,26 @@
 # 在 R3.6 测试通过。
 # 需要 tidyverse, BuenColors, ComplexHeatmap, ggrepel 包
 
+writeLines("\n出图展示 RNA-seq 样品分布\n")
+writeLines("Usage:")
 writeLines("\nRscript SampleDistribution.R Expression.csv SampleGroup.csv Output.pdf\n")
 argvs <- commandArgs(trailingOnly = TRUE)
 stopifnot(length(argvs) >= 3)
 
-library(tidyverse, quietly = TRUE)
-library(BuenColors, quietly = TRUE)
-library(ComplexHeatmap, quietly = TRUE)
-library(ggrepel, quietly = TRUE)
+expressionPath <- file.path(argvs[1])
+groupPath <- file.path(argvs[2])
+outPath <- file.path(argvs[3])
+writeLines(stringr::str_glue("输入表达文件：{expressionPath}"))
+writeLines(stringr::str_glue("样品分组文件：{groupPath}"))
+writeLines(stringr::str_glue("输出图片文件：{outPath}"))
 
-sampleGroup <- read_csv(argvs[2])
-Data0 <- read_csv(argvs[1])
+library(tidyverse, quietly = TRUE, warn.conflicts = FALSE)
+library(BuenColors, quietly = TRUE, warn.conflicts = FALSE)
+library(ComplexHeatmap, quietly = TRUE, warn.conflicts = FALSE)
+library(ggrepel, quietly = TRUE, warn.conflicts = FALSE)
+
+sampleGroup <- read_csv(groupPath)
+Data0 <- read_csv(expressionPath)
 if (all(c("ensembl_gene_id", "entrezgene_id", "hgnc_symbol") %in% colnames(Data0))) {
   Data0 <- dplyr::select(Data0, -entrezgene_id, -hgnc_symbol) %>% dplyr::rename(gene_id=ensembl_gene_id)
 }
@@ -48,10 +57,10 @@ col_fun <- jdb_palette("brewer_fire", type = "continuous") %>% rev()
 hmData <- as.matrix(dataDist)
 hm <- Heatmap(hmData, name = "Euclidean", col = col_fun, cluster_rows = TRUE, cluster_columns = TRUE, show_row_names = TRUE, row_names_side = "right", show_row_dend = FALSE, show_column_dend = FALSE, column_title = "Sample Distance", column_title_side = "top")
 
-pdf(argvs[3])
+pdf(outPath)
 print(pcaPlot)
 plot(dataHc, xlab = "Sample")
 draw(hm)
 dev.off()
 
-writeLines("完成")
+writeLines("\n完成")

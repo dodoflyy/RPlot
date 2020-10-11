@@ -3,14 +3,19 @@
 # 脚本在 R3.6 环境测试通过
 # 需要的 R 包依赖：tidyverse, gridExtra
 
+writeLines("\nWGBS 测序的 M-bias plot\n")
+writeLines("Usage:")
 writeLines("\nRscript MbiasPlot.R Input.csv Output.pdf \n")
 argvs <- commandArgs(trailingOnly = TRUE)
 stopifnot(length(argvs) >= 2)
+inPath <- file.path(argvs[1])
+outPath <- file.path(argvs[2])
+writeLines(stringr::str_glue("输入数据：{inPath}"))
+writeLines(stringr::str_glue("输出图像：{outPath}"))
 
-library(tidyverse, quietly = TRUE)
-library(gridExtra, quietly = TRUE)
-inPath <- argvs[1]
-outPath <- argvs[2]
+library(tidyverse, quietly = TRUE, warn.conflicts = FALSE)
+library(gridExtra, quietly = TRUE, warn.conflicts = FALSE)
+
 plotData <- read_csv(inPath)
 colFun <- c("#FB0007", "#139177", "#ED9E08", "#000000", "#169F0F")
 p1 <- ggplot2::ggplot(plotData) +
@@ -29,4 +34,5 @@ p2 <- ggplot2::ggplot(plotData) +
 
 p <- grid.arrange(p1, p2, nrow=1)
 ggplot2::ggsave(filename = outPath, plot = p, device = "pdf", width = 800, height = 400, units = "mm")
-writeLines("完成")
+
+writeLines("\n完成")

@@ -4,24 +4,32 @@
 # 脚本在 R 3.6 测试通过
 # 需要 tidyverse, solitude, ggrepel 包
 
+writeLines("\n大量 RNA-seq 样本时用 Isolation Forests 检测离群样本\n")
+writeLines("Usage:")
 writeLines("\nRscript IsolationForestsOutlier.R Expression.csv AnomalyScoreCutoff OutputDir Filename [\"Plot Title\"]\n")
 argvs <- commandArgs(trailingOnly = TRUE)
 stopifnot(length(argvs) >= 4)
 
-library(tidyverse, quietly = TRUE)
-library(solitude, quietly = TRUE)
-library(ggrepel, quietly = TRUE)
-
+expressionPath <- file.path(argvs[1])
+outDir <- file.path(argvs[3])
+fileName <- argvs[4]
+asCutoff <- argvs[2] %>% as.double() %>% round(3)
+writeLines(stringr::str_glue("表达文件：{expressionPath}"))
+writeLines(stringr::str_glue("AnomalyScoreCutoff: {asCutoff}"))
+writeLines(stringr::str_glue("输出目录：{outDir}"))
+writeLines(stringr::str_glue("输出文件名：{fileName}"))
 if (length(argvs) >= 5) {
   plotTitle <- argvs[5]
+  writeLines(stringr::str_glue("图像标题：{plotTitle}"))
 } else {
   plotTitle <- "Outlier Sample"
 }
-outDir <- argvs[3]
-fileName <- argvs[4]
-asCutoff <- argvs[2] %>% as.double() %>% round(3)
 
-Data <- read_csv(argvs[1])
+library(tidyverse, quietly = TRUE, warn.conflicts = FALSE)
+library(solitude, quietly = TRUE, warn.conflicts = FALSE)
+library(ggrepel, quietly = TRUE, warn.conflicts = FALSE)
+
+Data <- read_csv(expressionPath)
 Data2 <- as.data.frame(Data)
 rownames(Data2) <- Data2$gene_id
 Data2$gene_id <- NULL
@@ -75,5 +83,5 @@ normalOut <- stringr::str_glue("{outDir}/{fileName}_NormalSample.csv")
 write_csv(outlierSample, outlierOut)
 write_csv(normalData, normalOut)
 
-writeLines("完成")
+writeLines("\n完成")
 
