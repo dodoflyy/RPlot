@@ -1,5 +1,5 @@
 # @Date: 2020/6/22
-# @Author: MatthewP
+# @Author: Matthew
 
 '''
 从 Bismark 的 M-bias 结果里整理数据用于 M-bias 画图。
@@ -7,15 +7,18 @@
 '''
 
 import pathlib
-import sys
 import re
+import argparse
 
-print("python PrepareData.py Input.txt Output.csv\n\n")
-argvs = sys.argv
-in_path = pathlib.Path(argvs[1])
-out_path = pathlib.Path(argvs[2])
-print(in_path)
-print(out_path)
+parser = argparse.ArgumentParser(description="从 Bismark 的 M-bias 结果里整理数据用于 M-bias 画图。")
+parser.add_argument("-i", "--input", dest="IN", help="输入")
+parser.add_argument("-o", "--output", dest="OUT", help="输出路径，为 csv 格式")
+argvs = parser.parse_args()
+
+in_path = pathlib.Path(argvs.IN).resolve()
+out_path = pathlib.Path(argvs.OUT).resolve()
+print("输入：{}".format(in_path))
+print("输出：{}".format(out_path))
 
 first_line = re.compile("(C\w{2}) context \(R(\d)\)")
 with open(in_path, 'r') as i, open(out_path, 'w') as o:

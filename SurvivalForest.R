@@ -3,28 +3,24 @@
 # 需要以下包支持
 # tidyverse, BuenColors
 
-writeLines("\nCox 生存分析的森林图\n")
-writeLines("Usage:")
-writeLines("Rscript SurvivalForest.R Input.csv OutputDir Filename AxisYLable\n")
-args <- commandArgs(trailingOnly = TRUE)
-stopifnot(length(args) >= 4)
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(BuenColors))
 
-inPath <- file.path(args[1])
-outDir <- args[2]
-fileName <- args[3]
-yTitle <- args[4]
+scriptDescription <- "Cox 生存分析的森林图"
+parser <- ArgumentParser(description=scriptDescription, add_help=TRUE)
+parser$add_argument("--Cox", "-C", dest="COX", help="csv 格式 COX 分析结果", required=TRUE)
+parser$add_argument("--OutputDir", "-O", dest="OUT", help="输出目录", required=TRUE)
+parser$add_argument("--Basename", "-B", dest="BASE", help="输出文件名", required=TRUE)
+parser$add_argument("--Ylab", "-Y", dest="YLAB", help="Y 轴标题", required=TRUE)
 
-writeLines(stringr::str_glue("输入文件：{inPath}"))
-writeLines(stringr::str_glue("输出目录：{outDir}"))
-writeLines(stringr::str_glue("输出文件名：{fileName}"))
-writeLines(stringr::str_glue("Y 轴标题：{yTitle}"))
+argvs <- parser$parse_args()
+inPath <- file.path(argvs$COX)
+outDir <- file.path(argvs$OUT)
+baseName <- argvs$BASE
+yTitle <- argvs$YLAB
 
-library(tidyverse, quietly = TRUE, warn.conflicts = FALSE)
-library(BuenColors, quietly = TRUE, warn.conflicts = FALSE)
-
+writeLines("\n====== 读取数据 ======")
 coxData <- read_csv(inPath)
-head(coxData) %>% print()
-
 p <- ggplot(coxData) +
   geom_point(aes(x = HR, y = term, colour = P, fill = P), shape = 23, stroke = 3) +
   geom_segment(aes(x = lower_95, xend = upper_95, y = term, yend = term, colour = P), size = 2) +
@@ -33,11 +29,14 @@ p <- ggplot(coxData) +
   scale_fill_gradientn(colours = rev(jdb_palette("Zissou"))) +
   xlab("Hazard ratios") + ylab(yTitle) + 
   labs(colour = "P value", fill = "P value") +
-  theme(axis.text = element_text(size = 12), panel.border = element_rect(fill = NA, linetype = "solid"), panel.grid = element_blank(), panel.background = element_rect(fill = "white"), title = element_text(size = 12, face = "bold"))
+  theme(axis.text = element_text(size = 12), panel.border = element_rect(fill = NA, linetype = "solid"), 
+        panel.grid = element_blank(), panel.background = element_rect(fill = "white"), 
+        title = element_text(size = 12, face = "bold"))
 
-pngPlot <- str_glue("{outDir}/{fileName}.png")
-pdfPlot <- str_glue("{outDir}/{fileName}.pdf")
-ggsave(filename = pdfPlot, plot = p, device = "pdf")
-ggsave(filename = pngPlot, plot = p, dpi = 600, device = "png")
+writeLines("\n====== 保存图像 ======")
+pngName <- paste(baseName, "Forest", "png", sep=".")
+pdfName <- paste(baseName, "Forest", "pdf", sep=".")
+ggsave(filename = pdfName, plot = p, device = "pdf", path=outDir)
+ggsave(filename = pngName, plot = p, dpi = 600, device = "png", path=outDir)
 
-writeLines("\N完成")
+writeLines("\N完成！")

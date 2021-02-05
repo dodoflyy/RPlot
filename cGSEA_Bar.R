@@ -1,31 +1,35 @@
 # 取 clusterProfiler GSEA 结果画条形图展示，默认展示 P < 0.05 的通路
 # 默认输出2图片，分别使用通路 ID 和 Description
 # 脚本在 R 3.6 环境测试通过
-# 需要 tidyverse 包支持
+# 需要的依赖包
+# argparse, tidyverse
 
-writeLines("\n对 clusterProfiler GSEA 分析结果画条形图\n")
-writeLines("Usage:")
-writeLines("Rscript cGSEA_Bar.R GSEA.csv OutputDir Filename [\"Plot Title\"]\n")
-argvs <- commandArgs(trailingOnly = TRUE)
-stopifnot(length(argvs) >= 3)
-gseaPath <- file.path(argvs[1])
-outDir <- file.path(argvs[2])
-fileName <- argvs[3]
-writeLines(stringr::str_glue("GSEA 数据：{gseaPath}"))
-writeLines(stringr::str_glue("输出目录：{outDir}"))
-writeLines(stringr::str_glue("输出文件名：{fileName}"))
-if (length(argvs) >= 4) {
-  plotTitle <- argvs[4]
-  writeLines(stringr::str_glue("图像标题：{plotTitle}"))
-} else {
-  plotTitle <- "Pathway GSEA"
-}
+suppressPackageStartupMessages(library(argparse))
+suppressPackageStartupMessages(library(tidyverse))
 
-library(tidyverse, quietly = TRUE, warn.conflicts = FALSE)
+scriptDescription <- "对 clusterProfiler GSEA 分析结果画条形图"
+parser <- ArgumentParser(description=scriptDescription, add_help=TRUE)
+parser$add_argument("--GSEA", "-G", dest="GSEA", help="csv 格式 GSEA 结果", required=TRUE)
+parser$add_argument("--OutputDir", "-O", dest="OUT", help="输出目录", required=TRUE)
+parser$add_argument("--Basename", "-B", dest="BASE", help="输出文件名", required=TRUE)
+parser$add_argument("--Title", "-T", dest="TITLE", help="图像标题", default="GSEA")
+parser$add_argument("--Pvalue", "-P", dest="PVAL", help="P 值阈值", default=0.05)
 
-plotData <- read_csv(gseaPath) %>% dplyr::filter(`p.adjust` < 0.05) %>% dplyr::arrange(desc(enrichmentScore))
+argvs <- parser$parse_args()
+gseaPath <- file.path(argvs$GSEA)
+outDir <- file.path(argvs$OUT)
+fileName <- argvs$BASE
+plotTitle <- argvs$TITLE
+pVal <- as.double(argvs$PVAL)
+
+writeLines("\n====== 读取 GSEA 数据 ======")
+plotData <- read_csv(gseaPath) %>% dplyr::filter(`p.adjust` < pVal) %>% dplyr::arrange(desc(enrichmentScore))
 plotData$Description <- factor(plotData$Description, levels = plotData$Description)
-stopifnot(length(ncol(plotData)) >= 1)
+if (nrow(plotData) < 5) {
+  writeLines("X﹏X")
+  writeLines("通路数目太少，请检查数据和参数！")
+  q(save="no")
+}
 
 labelWrap <- function(x) {
   return(str_wrap(x, width = 45))
@@ -61,4 +65,4 @@ if (plotHeight2 < 100) {
 }
 ggplot2::ggsave(filename = pdfName2, plot = p2, device = "pdf", path = outDir, width = 200, height = plotHeight2, units = "mm", limitsize = FALSE)
 
-writeLines("\n完成！")
+writeLines("\n╰(*°▽°*)╯")

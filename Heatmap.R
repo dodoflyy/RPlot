@@ -3,22 +3,28 @@
 # 输出 pdf 
 # 在 R 3.6 环境测试通过
 # 需要以下 R 包支持
-# tidyverse, ComplexHeatmap, BuenColors
+# argparse, tidyverse, ComplexHeatmap, BuenColors
 
-writeLines("\n绘制表达热图")
-writeLines("Usage:")
-writeLines("\nRscript Heatmap.R ExpressionData.csv Heatmap.pdf [Title]\n")
-argvs <- commandArgs(trailingOnly = TRUE)
-stopifnot(length(argvs) >= 2)
-expressionPath <- file.path(argvs[1])
-heatmapPath <- file.path(argvs[2])
-writeLines(stringr::str_glue("表达文件：{expressionPath}"))
-writeLines(stringr::str_glue("输出如图：{heatmapPath}"))
+suppressPackageStartupMessages(library(argparse))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(ComplexHeatmap))
+suppressPackageStartupMessages(library(BuenColors))
 
-library(tidyverse, quietly = TRUE, warn.conflicts = FALSE)
-library(ComplexHeatmap, quietly = TRUE, warn.conflicts = FALSE)
-library(BuenColors, quietly = TRUE, warn.conflicts = FALSE)
+scriptDescription <- "绘制表达热图"
+parser <- ArgumentParser(description=scriptDescription, add_help=TRUE)
+parser$add_argument("--Expression", "-E", dest="EXPR", help="csv 格式表达数据，第一列为基因名 gene_id", required=TRUE)
+parser$add_argument("--OutputDir", "-O", dest="OUT", help="输出目录", required=TRUE)
+parser$add_argument("--Basename", "-B", dest="BASE", help="输出文件名", required=TRUE)
+parser$add_argument("--Title", "-T", dest="TITLE", help="图像标题", default="Gene Expression")
 
+argvs <- parser$parse_args()
+expressionPath <- file.path(argvs$EXPR)
+outputDir <- file.path(argvs$OUT)
+fileName <- paste(argvs$BASE, "Heatmap", "pdf", sep=".")
+heatmapPath <- file.path(outputDir, fileName)
+titleText <- argvs$TITLE
+
+writeLines("\n====== 读取表达数据 ======")
 Data <- read_csv(expressionPath) %>% dplyr::distinct(gene_id, .keep_all=TRUE) %>% as.data.frame()
 rownames(Data) <- Data$gene_id
 Data$gene_id <- NULL
@@ -26,17 +32,12 @@ Data2 <- t(Data) %>% scale() %>% t()
 head(Data2, n=3)
 
 color <- jdb_palette("Zissou", type="continuous")
-if (length(argvs) >= 3) {
-  titleText <- argvs[3]
-  writeLines(stringr::str_glue("图像标题：{titleText}"))
-  hm <- Heatmap(Data2, name="Expression(scaled)", col=color, cluster_rows = TRUE, cluster_columns = FALSE, show_row_names = FALSE, column_names_side = "top", column_title = titleText)
-} else {
-  hm <- Heatmap(Data2, name="Expression(scaled)", col=color, cluster_rows = TRUE, cluster_columns = FALSE, show_row_names = FALSE, column_names_side = "top")
-}
+hm <- Heatmap(Data2, name="Expression(scaled)", col=color, cluster_rows = TRUE, cluster_columns = FALSE, 
+              show_row_names = FALSE, column_names_side = "top", column_title = titleText)
 
 pdf(heatmapPath)
 draw(hm)
 dev.off()
 
-writeLines("\n完成")
+writeLines("\n完成！")
 

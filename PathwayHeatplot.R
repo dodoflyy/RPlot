@@ -1,111 +1,213 @@
 # 行为通路，列为基因的通路富集热图
+# 可以选择按照 ES 方向分组画图
 # 基因展示前 50 个
+# 通路最多展示 25 条
 # 默认差异基因是 DESeq2 的结果，如果不是要修改表头
 # 默认 GSEA 结果是 clusterProfiler 产生的
 # 在 R 3.6 环境测试通过
 # 需要以下 R 包支持
-# tidyverse, ComplexHeatmap, BuenColors
+# argparse, tidyverse, ComplexHeatmap, BuenColors
 
-writeLines("\n做通路富集和差异基因的热图\n")
-writeLines("Usage:")
-writeLines("\nRscript PathwayHeatplot.R GSEA.csv CutoffP DEG.csv Heatplot.pdf \"TitleText\" \n")
-argvs <- commandArgs(trailingOnly = TRUE)
-stopifnot(length(argvs) >= 5)
+suppressPackageStartupMessages(library(argparse))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(ComplexHeatmap))
+suppressPackageStartupMessages(library(BuenColors))
+suppressPackageStartupMessages(library(circlize))
 
-gseaPath <- file.path(argvs[1])
-pCutoff <- as.double(argvs[2])
-degPath <- file.path(argvs[3])
-plotPath <- file.path(argvs[4])
-titleText <- argvs[5]
-writeLines(stringr::str_glue("GSEA 数据：{gseaPath}"))
-writeLines(stringr::str_glue("P value 阈值：{pCutoff}"))
-writeLines(stringr::str_glue("差异基因文件：{degPath}"))
-writeLines(stringr::str_glue("输出：{plotPath}"))
-writeLines(stringr::str_glue("图像标题：{titleText}"))
+scriptDescription="做 GSEA 通路富集和差异基因的热图。使用 clusterProfiler 包进行 GSEA 的结果的 core_enrichment 基因，而不是通路的所有基因。"
+parser <- ArgumentParser(description=scriptDescription, add_help=TRUE)
+parser$add_argument("--GSEA", "-G", dest="GSEA", help="csv 格式 GSEA 结果", required=TRUE)
+parser$add_argument("--pvalue", "-P", dest="PVAL", help="P 值阈值，只分析符合条件的 GSEA 通路", required=TRUE)
+parser$add_argument("--DEGs", "-D", dest="DEGs", help="DESeq2 差异基因分析结果", required=TRUE)
+parser$add_argument("--OutputDir", "-O", dest="OUT", help="输出目录", required=TRUE)
+parser$add_argument("--basename", "-B", dest="BASE", help="输出文件名", required=TRUE)
+parser$add_argument("--Title", "-T", dest="TITLE", help="热图标题", default="GSEA Pathway Core Enrichment Genes")
+parser$add_argument("--split", "-S", action="store_true", dest="SPLIT", help="是否区分通路方向")
 
-options(stringsAsFactors = FALSE)
-library(tidyverse, quietly = TRUE, warn.conflicts = FALSE)
-library(ComplexHeatmap, quietly = TRUE, warn.conflicts = FALSE)
-library(BuenColors, quietly=TRUE, warn.conflicts = FALSE)
-library(circlize, quietly = TRUE, warn.conflicts = FALSE)
+# 取得频次最高的基因列表
+getGeneList <- function(pathway_data) {
+  geneList <- stringr::str_c(pathway_data$core_enrichment, collapse = "/") %>% 
+    strsplit(split = "/", fixed = TRUE) %>% unlist() %>% table() %>% unlist()
+  rankGeneList <- geneList[order(geneList, decreasing = TRUE)] %>% names()
+  if (length(rankGeneList) > 50) {
+    rankGeneList <- rankGeneList[1:50]
+  }
+  return(rankGeneList)
+}
+
+# 整理通路基因的差异数据，通路不包含该基因则为 NA
+# 按照基因频率排序
+getPathwayDEGs <- function(pathway_data) {
+  pathwayList <- list()
+  pathwayGene <- pathway_data$core_enrichment
+  pathwayDescription <- pathway_data$Description
+  names(pathwayGene) <- pathwayDescription
+  rankGeneList <- getGeneList(pathway_data)
+  for (i in 1:length(pathwayGene)) {
+    # 按照 rankGeneList 的基因顺序找到相应基因差异倍数，如果相应基因不在 core enrichment 里，那么就赋值NA
+    # 然后每一条通路的结果存到 list
+    pathwayName <- pathwayDescription[i]
+    coreGene <- strsplit(pathwayGene[i], split = "/", fixed = TRUE) %>% unlist()
+    geneMatch <- match(rankGeneList, coreGene)
+    matchCore <- coreGene[geneMatch]
+    geneDeg <- deg[match(matchCore, names(deg))]
+    names(geneDeg) <- rankGeneList
+    pathwayList[[pathwayName]] <- geneDeg
+  }
+  return(pathwayList)
+}
+
+# 将数据转换到画图矩阵
+getPlotData <- function(pathway_data) {
+  pathwayList <- getPathwayDEGs(pathway_data)
+  rankGeneList <- getGeneList(pathway_data)
+  geneMap <- tibble(entrezgene_id=as.double(rankGeneList)) %>% dplyr::left_join(degData, by="entrezgene_id") %>% 
+    dplyr::select(entrezgene_id, hgnc_symbol)
+  plotData <- as.data.frame(pathwayList)
+  rownames(plotData) <- geneMap$hgnc_symbol
+  colnames(plotData) <- pathway_data$Description
+  plotData1 <- plotData[, colSums(!is.na(plotData)) > 0]
+  plotData2 <- t(plotData1)
+  head(plotData2, n=c(5, 5)) %>% print()
+  return(plotData2)
+}
+
+# 平均行名长度
+meanCharLength <- function(row_names) {
+  rowNum <- length(row_names)
+  rowLength <- sapply(row_names, nchar)
+  totalLength <- sum(rowLength)
+  meanLength <- totalLength / rowNum %>% round()
+  return(meanLength)
+}
+
+# 配置画图参数
+# pdf 高度由行数和行名平均长度决定
+getPlotConfig <- function(plot_data) {
+  plotConfig <- list()
+  w <- 27
+  rowNames <- rownames(plot_data)
+  rowNum <- length(rowNames)
+  meanRowLength <- meanCharLength(rowNames)
+  heightF1 <- meanRowLength / 40 %>% ceiling()
+  heightF2 <- rowNum * 0.03
+  h <- rowNum * heightF1 * heightF2 * 0.4 %>% ceiling()
+  if (h < 7) {
+    h = 7
+  }
+  minL <- min(plot_data, na.rm = TRUE)
+  maxL <- max(plot_data, na.rm = TRUE)
+  color <- jdb_palette("ocean_brick", type="continuous")
+  if (all(abs(minL) <= 1, abs(maxL) <= 1)) {
+    fromL <- -1
+    toL <- 1
+    breaksL <- c(-1, 0, 1)
+    labelsL <- c("-1", "0", "1")
+    heightL <- 8
+  } else if (all(abs(minL) <= 2, abs(maxL) <= 2)) {
+    fromL <- -2
+    toL <- 2
+    breaksL <- c(-2, 0, 2)
+    labelsL <- c("-2", "0", "2")
+    heightL <- 8
+  } else {
+    fromL <- -4
+    toL <- 4
+    breaksL <- c(-4, -2, 0, 2, 4)
+    labelsL <- c("<= -4", "-2", "0", "2", ">= 4")
+    heightL <- 12
+  }
+  plotConfig[["w"]] <- w
+  plotConfig[["h"]] <- h
+  plotConfig[["color"]] <- color
+  plotConfig[["fromL"]] <- fromL
+  plotConfig[["toL"]] <- toL
+  plotConfig[["breaksL"]] <- breaksL
+  plotConfig[["labelsL"]] <- labelsL
+  plotConfig[["heightL"]] <- heightL
+  return(plotConfig)
+}
+
+# 修改行名长度，40 字符换行显示
+wrapName <- function(name_str) {
+  new_str <- strwrap(name_str, 40) %>% paste(sep = "\n", collapse = "\n")
+  return(new_str)
+}
+
+# 画图
+hmPlot <- function(plot_data, plot_config) {
+  colorFun <- colorRamp2(seq(from = plot_config[["fromL"]], to = plot_config[["toL"]], 
+                             length.out = length(plot_config[["color"]])), plot_config[["color"]])
+  rowLabels <- sapply(rownames(plot_data), wrapName)
+  hm <- Heatmap(plot_data, name="FoldChange(Log2)", col=colorFun, column_title = titleText, 
+                column_title_side = "top", cluster_rows = FALSE, cluster_columns = FALSE, 
+                show_column_dend = FALSE, show_row_dend = FALSE, show_row_names = TRUE, 
+                show_column_names = TRUE, row_names_side = "left", column_names_side = "bottom", 
+                column_names_rot = 45, row_labels=rowLabels, row_names_max_width=unit(10, "cm"), na_col = "white", column_order = order(colSums(is.na(plot_data))), 
+                row_order = order(rowSums(!is.na(plot_data))), border = TRUE, rect_gp = gpar(col="white"), 
+                heatmap_legend_param = list(grid_height = unit(plot_config[["heightL"]], "mm"), grid_width = unit(6, "mm"), at = plot_config[["breaksL"]], labels = plot_config[["labelsL"]]))
+  return(hm)
+}
+
+# 保存图片
+drawPlot <- function(pathway_data, plot_path) {
+  plotData <- getPlotData(pathway_data)
+  plotConfig <- getPlotConfig(plotData)
+  p <- hmPlot(plotData, plotConfig)
+  pdf(plot_path, width = plotConfig[["w"]], height = plotConfig[["h"]])
+  draw(p)
+  dev.off()
+}
+
+# 选取前 25 通路
+subsetPathways <- function(pathway_data) {
+  if (nrow(pathway_data) > 25) {
+    pathwayData <- dplyr::slice_head(pathway_data, n=25)
+  } else if (nrow(pathway_data) < 5) { 
+    writeLines("\no(≧口≦)o \n通路数目小于 5 请检查数据和参数！")
+    q(save="no")
+  } else
+    {
+    pathwayData <- pathway_data
+  }
+  return(pathwayData)
+}
+
+argvs <- parser$parse_args()
+gseaPath <- file.path(argvs$GSEA)
+pCutoff <- as.double(argvs$PVAL)
+degPath <- file.path(argvs$DEGs)
+outputDir <- file.path(argvs$OUT)
+baseName <- argvs$BASE
+titleText <- argvs$TITLE
+splitPathway <- argvs$SPLIT
 
 # 默认用 entrezgene_id 进行 GSEA
-# 用 SYMBOL 进行排序，这样重复 entrezgene_id 时能优先选择有 symbol 的
-degData <- read_csv(degPath) %>% dplyr::arrange(hgnc_symbol) %>% dplyr::filter(!is.na(entrezgene_id)) %>% dplyr::distinct(entrezgene_id, .keep_all=TRUE)
+# 用 SYMBOL 进行倒序排序，这样重复 entrezgene_id 时能优先选择有 symbol 的
+# 用字符串倒序排序时，空字符串在非空字符串下，NA 在最下
+writeLines("\n====== 读取差异基因数据 ======")
+degData <- read_csv(degPath) %>% dplyr::arrange(desc(hgnc_symbol)) %>% 
+  dplyr::filter(!is.na(entrezgene_id)) %>% dplyr::distinct(entrezgene_id, .keep_all=TRUE)
 deg <- degData$log2FoldChange
 names(deg) <- degData$entrezgene_id
 
+writeLines("\n====== 读取通路富集数据 ======")
 pathwayData <- read_csv(gseaPath) %>% dplyr::filter(`p.adjust` < pCutoff)
 stopifnot(nrow(pathwayData) > 1)
-geneList <- stringr::str_c(pathwayData$core_enrichment, collapse = "/") %>% strsplit(split = "/", fixed = TRUE) %>% unlist() %>% table() %>% unlist()
-rankGeneList <- geneList[order(geneList, decreasing = TRUE)] %>% names()
-if (length(rankGeneList) > 50) {
-  rankGeneList <- rankGeneList[1:50]
-}
-
-DataList <- list()
-pathwayGene <- pathwayData$core_enrichment
-Description <- pathwayData$Description
-names(pathwayGene) <- pathwayData$Description
-for (i in 1:length(pathwayGene)) {
-  # 按照 rankGeneList 的基因顺序找到相应基因差异倍数，如果相应基因不在 core enrichment 里，那么就赋值NA
-  # 然后每一条通路的结果存到 list
-  pathwayName <- Description[i]
-  coreGene <- strsplit(pathwayGene[i], split = "/", fixed = TRUE) %>% unlist()
-  geneMatch <- match(rankGeneList, coreGene)
-  matchCore <- coreGene[geneMatch]
-  geneDeg <- deg[match(matchCore, names(deg))]
-  names(geneDeg) <- rankGeneList
-  DataList[[pathwayName]] <- geneDeg
-}
-# head(DataList, n=3)
-Data <- as.data.frame(DataList)
-# head(Data, n=3)
-geneMap <- tibble(entrezgene_id=as.double(rankGeneList)) %>% dplyr::left_join(degData, by="entrezgene_id") %>% dplyr::select(entrezgene_id, hgnc_symbol)
-head(rankGeneList)
-glimpse(geneMap)
-length(rankGeneList)
-rownames(Data) <- geneMap$hgnc_symbol
-colnames(Data) <- Description
-Data <- Data[, colSums(!is.na(Data)) > 0]
-
-# 转换到行为通路，列为基因
-PlotData <- t(Data)
-head(PlotData, n=3)
-w <- 22
-h <- nrow(PlotData) * 0.25
-if (h < 7) {
-  h = 7
-}
-
-minL <- min(PlotData, na.rm = TRUE)
-maxL <- max(PlotData, na.rm = TRUE)
-color <- jdb_palette("ocean_brick", type="continuous")
-if (all(abs(minL) <= 1 , abs(maxL) <= 1)) {
-  fromL <- -1
-  toL <- 1
-  breaksL <- c(-1, 0, 1)
-  labelsL <- c("-1", "0", "1")
-  heightL <- 8
-} else if (all(abs(minL) <= 2 , abs(maxL) <= 2)) {
-  fromL <- -2
-  toL <- 2
-  breaksL <- c(-2, 0, 2)
-  labelsL <- c("-2", "0", "2")
-  heightL <- 8
+if (splitPathway) {
+  # 按照 ES 值分组画图
+  pathwayData1 <- dplyr::filter(pathwayData, enrichmentScore > 0) %>% subsetPathways()
+  pathwayData2 <- dplyr::filter(pathwayData, enrichmentScore < 0) %>% subsetPathways()
+  fileName1 <- paste(baseName, "Heatplot", "1", "pdf", sep=".")
+  fileName2 <- paste(baseName, "Heatplot", "2", "pdf", sep=".")
+  plotPath1 <- file.path(outputDir, fileName1)
+  plotPath2 <- file.path(outputDir, fileName2)
+  drawPlot(pathwayData1, plotPath1)
+  drawPlot(pathwayData2, plotPath2)
 } else {
-  fromL <- -4
-  toL <- 4
-  breaksL <- c(-4, -2, 0, 2, 4)
-  labelsL <- c("<= -4", "-2", "0", "2", ">= 4")
-  heightL <- 12
+  fileName <- paste(baseName, "Heatplot", "pdf", sep=".")
+  plotPath <- file.path(outputDir, fileName)
+  drawPlot(subsetPathways(pathwayData), plotPath)
 }
 
-color_fun <- colorRamp2(seq(from = fromL, to = toL, length.out = length(color)), color)
-hm <- Heatmap(PlotData, name="FoldChange(Log2)", col=color_fun, column_title = titleText, column_title_side = "top", cluster_rows = FALSE, cluster_columns = FALSE, show_column_dend = FALSE, show_row_dend = FALSE, show_row_names = TRUE, show_column_names = TRUE, row_names_side = "left", column_names_side = "bottom", column_names_rot = 45, na_col = "white", column_order = order(colSums(is.na(PlotData))), row_order = order(rowSums(!is.na(PlotData))), row_names_max_width = max_text_width(rownames(PlotData)), border = TRUE, rect_gp = gpar(col="white"), heatmap_legend_param = list(grid_height = unit(heightL, "mm"), grid_width = unit(6, "mm"), at = breaksL, labels = labelsL))
-
-pdf(plotPath, width = w, height = h)
-draw(hm)
-dev.off()
-
-writeLines("\n完成！")
+writeLines("ヽ(✿ﾟ▽ﾟ)ノ")

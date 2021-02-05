@@ -1,34 +1,32 @@
-# 从clusterProfiler 通路富集结果输出泡泡图和柱状图
+# 从 clusterProfiler 通路富集结果输出泡泡图和柱状图
 # 可以选择展示的通路数目，默认按P值排序后筛选相应数目
 # 脚本在 R 3.6 测试通过
-# 需要以下包支持
-# tidyverse, BuenColors
+# 需要以下包依赖
+# argparse, tidyverse, BuenColors
 
-writeLines("\n生成 clusterProfiler 通路富集结果的泡泡图和柱状图\n")
-writeLines("Usage:")
-writeLines("\nRscript EnrichPathewy.R Input.csv OutputDir Filename PlotPathwayNum [PlotTitle]\n")
-args <- commandArgs(TRUE)
-stopifnot(length(args) >= 3)
-inPath <- args[1]
-outDir <- file.path(args[2])
-fileName <- args[3]
-showNum <- as.integer(args[4]) 
-writeLines(stringr::str_glue("通路数据：{inPath}"))
-writeLines(stringr::str_glue("输出目录：{outDir}"))
-writeLines(stringr::str_glue("输出文件名：{fileName}"))
-writeLines(stringr::str_glue("显示通路数目：{showNum}"))
 
-if(length(args) >= 5){
-  plotTitle <- args[5]
-  writeLines(stringr::str_glue("图像标题：{plotTitle}\n"))
-}else{
-  plotTitle <- "Pathway enrichment"
-}
+suppressPackageStartupMessages(library(argparse))
+suppressPackageStartupMessages(library(BuenColors))
+suppressPackageStartupMessages(library(tidyverse))
 
-library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
-library(BuenColors, warn.conflicts = FALSE, quietly = TRUE)
+scriptDescription <- "生成 clusterProfiler 通路富集结果的泡泡图和柱状图"
+parser <- ArgumentParser(description=scriptDescription, add_help=TRUE)
+parser$add_argument("--Enrich", "-E", dest="ENRICH", help="csv 格式通路富集结果", required=TRUE)
+parser$add_argument("--OutputDir", "-O", dest="OUT", help="输出目录", required=TRUE)
+parser$add_argument("--Basename", "-B", dest="BASE", help="输出文件名", required=TRUE)
+parser$add_argument("--Title", "-T", dest="TITLE", help="图像标题", default="Pathway Enrichment")
+parser$add_argument("--Number", "-N", dest="NUM", help="通路数目", default=20)
 
-pathway <- read_csv(inPath) %>% arrange(`p.adjust`) %>% separate(GeneRatio, into=c("k", "n"), sep="/") %>% separate(BgRatio, into=c("M", "N"), sep="/") %>% mutate(RichFactor=as.numeric(k)/as.numeric(M))
+argvs <- parser$parse_args()
+inPath <- file.path(argvs$ENRICH)
+outDir <- file.path(argvs$OUT)
+fileName <- argvs$BASE
+showNum <- as.integer(argvs$NUM) 
+plotTitle <- argvs$TITLE
+
+writeLines("\n====== 读取通路富集结果 ======")
+pathway <- read_csv(inPath) %>% arrange(`p.adjust`) %>% separate(GeneRatio, into=c("k", "n"), sep="/") %>% 
+  separate(BgRatio, into=c("M", "N"), sep="/") %>% mutate(RichFactor=as.numeric(k)/as.numeric(M))
 if (nrow(pathway) > showNum) {
   pathway <- dplyr::slice(pathway, 1:showNum)
 }
@@ -71,10 +69,12 @@ bar_w <- showNum * 10 + 20
 if (bar_w < 120) {
   bar_w <- 120
 }
+
+writeLines("\n====== 保存图片 ======")
 ggsave(filename=dotPng, dpi=600, plot=dotPlot, device = "png", width = 150, height = dot_h, unit = "mm")
 ggsave(filename=dotPdf, plot=dotPlot, device = "pdf", width = 150, height = dot_h, unit = "mm")
 ggsave(filename=barPng, dpi=600, plot=barPlot, device = "png", width = bar_w, height = 150, unit = "mm")
 ggsave(filename=barPdf, plot=barPlot, device = "pdf", width = bar_w, height = 150, unit = "mm")
 
-writeLines("\n完成！")
+writeLines("\nヽ(✿ﾟ▽ﾟ)ノ")
 
