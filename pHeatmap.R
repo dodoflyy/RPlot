@@ -11,12 +11,12 @@ suppressPackageStartupMessages(library(BuenColors))
 
 scriptDescription="热图展示 DESeq2 差异基因分析结果"
 parser <- ArgumentParser(description=scriptDescription, add_help=TRUE)
-parser$add_argument("--Expression", "-E", dest="EXPR", help="csv 格式基因表达数据", required=TRUE)
-parser$add_argument("--DEGs", "-D", dest="DEGs", help="DESeq2 差异基因分析结果", required=TRUE)
-parser$add_argument("--OutputDir", "-O", dest="OUT", help="输出目录", required=TRUE)
-parser$add_argument("--basename", "-B", dest="BASE", help="输出文件名", required=TRUE)
-parser$add_argument("--Title", "-T", dest="TITLE", help="热图标题", default="Gene expression heatmap")
-parser$add_argument("--GeneType", "-G", dest="GT", help="基因名类型，可选值为：hgnc_symbol, ensembl_gene_id, entrezgene_id", 
+parser$add_argument("--Expression", dest="EXPR", help="csv 格式基因表达数据", required=TRUE)
+parser$add_argument("--DEGs", dest="DEGs", help="DESeq2 差异基因分析结果", required=TRUE)
+parser$add_argument("--OutputDir", dest="OUT", help="输出目录", required=TRUE)
+parser$add_argument("--basename", dest="BASE", help="输出文件名", required=TRUE)
+parser$add_argument("--Title", dest="TITLE", help="热图标题", default="Gene expression heatmap")
+parser$add_argument("--GeneType", dest="GT", help="基因名类型，可选值为：hgnc_symbol, ensembl_gene_id, entrezgene_id", 
                     choices=c("hgnc_symbol", "ensembl_gene_id", "entrezgene_id"), required=TRUE)
 
 argvs <- parser$parse_args()
@@ -47,8 +47,9 @@ if (geneIdType == "ensembl_gene_id") {
   expr2 <- dplyr::select(expr, -ensembl_gene_id, -entrezgene_id) %>% dplyr::filter(!is.na(hgnc_symbol) & hgnc_symbol != "") %>% 
     dplyr::filter(hgnc_symbol %in% deg$hgnc_symbol) %>% dplyr::distinct(hgnc_symbol, .keep_all=TRUE) %>% dplyr::rename(gene_id=hgnc_symbol) %>% as.data.frame()
 } else {
-  expr2 <- dplyr::select(expr, -ensembl_gene_id, -hgnc_symbol) %>% dplyr::filter(!is.na(entrezgene_id)) %>% dplyr::filter(entrezgene_id %in% deg$entrezgene_id) 
-  %>% dplyr::distinct(entrezgene_id, .keep_all=TRUE) %>% dplyr::rename(gene_id=entrezgene_id) %>% as.data.frame()
+  expr2 <- dplyr::select(expr, -ensembl_gene_id, -hgnc_symbol) %>% dplyr::filter(!is.na(entrezgene_id)) %>% 
+    dplyr::filter(entrezgene_id %in% deg$entrezgene_id) %>% dplyr::distinct(entrezgene_id, .keep_all=TRUE) %>% 
+    dplyr::rename(gene_id=entrezgene_id) %>% as.data.frame()
 }
 
 rownames(expr2) <- expr2$gene_id
@@ -63,7 +64,6 @@ exprV <- as.vector(expr2)
 maxV <- max(exprV)
 minV <- min(exprV)
 
-# color_color <- c(colorRampPalette(colors = c("#28B463", "#D0D3D4"))(100), colorRampPalette(colors=c("#D0D3D4", "#A93226"))(100))
 color_color <- jdb_palette("Zissou", type = "continuous")
 pheatmap(expr2, cluster_rows = TRUE, cluster_cols = TRUE, legend = TRUE, show_colnames = TRUE, 
          show_rownames = FALSE, color = color_color, scale = "none", main = titleText, 

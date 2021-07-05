@@ -16,13 +16,13 @@ suppressPackageStartupMessages(library(circlize))
 
 scriptDescription="做 GSEA 通路富集和差异基因的热图。使用 clusterProfiler 包进行 GSEA 的结果的 core_enrichment 基因，而不是通路的所有基因。"
 parser <- ArgumentParser(description=scriptDescription, add_help=TRUE)
-parser$add_argument("--GSEA", "-G", dest="GSEA", help="csv 格式 GSEA 结果", required=TRUE)
-parser$add_argument("--pvalue", "-P", dest="PVAL", help="P 值阈值，只分析符合条件的 GSEA 通路", required=TRUE)
-parser$add_argument("--DEGs", "-D", dest="DEGs", help="DESeq2 差异基因分析结果", required=TRUE)
-parser$add_argument("--OutputDir", "-O", dest="OUT", help="输出目录", required=TRUE)
-parser$add_argument("--basename", "-B", dest="BASE", help="输出文件名", required=TRUE)
-parser$add_argument("--Title", "-T", dest="TITLE", help="热图标题", default="GSEA Pathway Core Enrichment Genes")
-parser$add_argument("--split", "-S", action="store_true", dest="SPLIT", help="是否区分通路方向")
+parser$add_argument("--GSEA", dest="GSEA", help="csv 格式 GSEA 结果", required=TRUE)
+parser$add_argument("--pvalue", dest="PVAL", help="P 值阈值，只分析符合条件的 GSEA 通路，默认 0.25", default=0.25)
+parser$add_argument("--DEGs", dest="DEGs", help="DESeq2 差异基因分析结果", required=TRUE)
+parser$add_argument("--OutputDir", dest="OUT", help="输出目录，默认当前目录", default=".")
+parser$add_argument("--basename", dest="BASE", help="输出文件名，默认\"Uknow\"", default="Unknow")
+parser$add_argument("--Title", dest="TITLE", help="热图标题，默认 \"GSEA Pathway Core Enrichment Genes\"", default="GSEA Pathway Core Enrichment Genes")
+parser$add_argument("--split", action="store_true", dest="SPLIT", help="是否区分通路方向")
 
 # 取得频次最高的基因列表
 getGeneList <- function(pathway_data) {
@@ -185,13 +185,11 @@ splitPathway <- argvs$SPLIT
 # 默认用 entrezgene_id 进行 GSEA
 # 用 SYMBOL 进行倒序排序，这样重复 entrezgene_id 时能优先选择有 symbol 的
 # 用字符串倒序排序时，空字符串在非空字符串下，NA 在最下
-writeLines("\n====== 读取差异基因数据 ======")
 degData <- read_csv(degPath) %>% dplyr::arrange(desc(hgnc_symbol)) %>% 
   dplyr::filter(!is.na(entrezgene_id)) %>% dplyr::distinct(entrezgene_id, .keep_all=TRUE)
 deg <- degData$log2FoldChange
 names(deg) <- degData$entrezgene_id
 
-writeLines("\n====== 读取通路富集数据 ======")
 pathwayData <- read_csv(gseaPath) %>% dplyr::filter(`p.adjust` < pCutoff)
 stopifnot(nrow(pathwayData) > 1)
 if (splitPathway) {

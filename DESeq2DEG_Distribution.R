@@ -11,16 +11,15 @@ suppressPackageStartupMessages(library(tidyverse))
 
 scriptDescription <- "展示 DESeq2 分析的差异基因总体情况，可用来挑选合适的 Outlier 阈值"
 parser <- ArgumentParser(description=scriptDescription, add_help=TRUE)
-parser$add_argument("--DEGs", "-D", dest="DEGs", help="差异基因数据", required=TRUE)
-parser$add_argument("--PdfPath", "-F", dest="PDF", help="输出 PDF 路径", required=TRUE)
-parser$add_argument("--Pvalue", "-P", dest="PVAL", help="P 值阈值", default=0.05)
+parser$add_argument("--DEGs", dest="DEGs", help="差异基因数据", required=TRUE)
+parser$add_argument("--PdfPath", dest="PDF", help="输出 PDF 路径", required=TRUE)
+parser$add_argument("--Pvalue", dest="PVAL", help="P 值阈值，默认 0.05", default=0.05)
 
 argvs <- parser$parse_args()
 degPath <- file.path(argvs$DEGs)
 plotPath <- file.path(argvs$PDF)
 pVal <- as.double(argvs$PVAL)
 
-writeLines("\n====== 读取差异基因数据 ======")
 degData <- readr::read_csv(degPath) %>% dplyr::filter(!is.na(log2FoldChange) & padj < pVal)
 if (nrow(degData) < 25) {
   writeLines("╮（╯＿╰）╭")
@@ -64,6 +63,7 @@ degData3 <- dplyr::filter(degData, log2FoldChange < 0)
 plotData4 <- nmads_data(degData = degData3)
 plot4 <- nmads_plot(plot_data = plotData4, plot_title = "Down DEGs Nmads")
 
+# 将多个图像保存在一个 PDF 文件里
 plotList <- list(plot1, plot2,  plot3, plot4)
 pdf(plotPath)
 plotList

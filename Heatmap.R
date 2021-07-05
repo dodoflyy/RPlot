@@ -12,27 +12,36 @@ suppressPackageStartupMessages(library(BuenColors))
 
 scriptDescription <- "绘制表达热图"
 parser <- ArgumentParser(description=scriptDescription, add_help=TRUE)
-parser$add_argument("--Expression", "-E", dest="EXPR", help="csv 格式表达数据，第一列为基因名 gene_id", required=TRUE)
-parser$add_argument("--OutputDir", "-O", dest="OUT", help="输出目录", required=TRUE)
-parser$add_argument("--Basename", "-B", dest="BASE", help="输出文件名", required=TRUE)
-parser$add_argument("--Title", "-T", dest="TITLE", help="图像标题", default="Gene Expression")
+parser$add_argument("--Expression", dest="EXPR", help="csv 格式表达数据，第一列为基因名 gene_id", required=TRUE)
+parser$add_argument("--OutputDir", dest="OUT", help="输出目录", default=".")
+parser$add_argument("--Basename", dest="BASE", help="输出文件名，默认 \"Unknow\"", default="Unknow")
+parser$add_argument("--Title", dest="TITLE", help="图像标题，默认 \"Gene Expression\"", default="Gene Expression")
+parser$add_argument("--GeneID", dest="GENEID", help="基因名的列名，默认 \"gene_id\"", default="gene_id")
+parser$add_argument("--Zscore", dest="ZSCORE", action="store_true", help="是否对数据进行 Z score 处理？")
 
 argvs <- parser$parse_args()
 expressionPath <- file.path(argvs$EXPR)
 outputDir <- file.path(argvs$OUT)
-fileName <- paste(argvs$BASE, "Heatmap", "pdf", sep=".")
-heatmapPath <- file.path(outputDir, fileName)
 titleText <- argvs$TITLE
+baseName <- argvs$BASE
+geneColumnName <- argvs$GENEID
+zScore <- argvs$ZSCORE
+fileName <- paste(baseName, "Heatmap", "pdf", sep=".")
+heatmapPath <- file.path(outputDir, fileName)
 
-writeLines("\n====== 读取表达数据 ======")
-Data <- read_csv(expressionPath) %>% dplyr::distinct(gene_id, .keep_all=TRUE) %>% as.data.frame()
-rownames(Data) <- Data$gene_id
-Data$gene_id <- NULL
-Data2 <- t(Data) %>% scale() %>% t()
-head(Data2, n=3)
+exprData <- read_csv(expressionPath) %>% dplyr::distinct(gene_id, .keep_all=TRUE) %>% as.data.frame()
+rownames(exprData) <- exprData$gene_id
+exprData$gene_id <- NULL
 
-color <- jdb_palette("Zissou", type="continuous")
-hm <- Heatmap(Data2, name="Expression(scaled)", col=color, cluster_rows = TRUE, cluster_columns = FALSE, 
+# 是否 Z Score 转换
+if (zScore) {
+  plotData <- as.matrix(exprData) %>% t() %>% scale() %>% t()
+} else {
+  plotData <- as.matrix(exprData)
+}
+
+colorFun <- jdb_palette("Zissou", type="continuous")
+hm <- Heatmap(plotData, name="Normalized Expression", col=colorFun, cluster_rows = TRUE, cluster_columns = FALSE, 
               show_row_names = FALSE, column_names_side = "top", column_title = titleText)
 
 pdf(heatmapPath)
