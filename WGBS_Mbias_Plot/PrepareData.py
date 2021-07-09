@@ -38,4 +38,3 @@ with open(in_path, 'r') as i, open(out_path, 'w') as o:
         else:
             pass
 
-print("\n完成\n")
