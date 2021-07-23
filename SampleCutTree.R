@@ -23,7 +23,6 @@ outDir <- file.path(argvs$OUT)
 baseName <- argvs$BASE
 plotTitle <- argvs$TITLE
 
-writeLines("\n====== 读取表达数据 ======")
 Data1 <- read_csv(expressionPath)
 glimpse(Data1)
 Data2 <- as.data.frame(Data1)
@@ -36,7 +35,7 @@ hc <- hclust(dd, method = "average")
 pdfName <- paste(baseName, "CutTree", "pdf", sep=".")
 pdfOut <- file.path(outDir, pdfName)
 w <- (nrow(Data3) * 0.2) %>% as.integer()
-writeLines("\n====== 生成聚类树图 ======")
+
 pdf(pdfOut, width = w, height = 9)
 plot(hc, xlab = "Sample", main = plotTitle)
 if (cutHeight != 0) {
@@ -57,10 +56,8 @@ if (cutHeight != 0) {
   keepSample <- cutTree[cutTree==keepGroup] %>% names()
   keepData <- dplyr::select(Data1, gene_id, keepSample)
   removeList <- setdiff(rownames(Data3), keepSample)
-  writeLines("\n====== 写出结果数据 ======")
   write_csv(keepData, exprOut)
   write.table(removeList, file = rmOut, sep = "\n", row.names = FALSE, col.names = FALSE)
-  writeLines("\n++++++ 以下样本数据被移除 ++++++")
   print(removeList)
 }
 
